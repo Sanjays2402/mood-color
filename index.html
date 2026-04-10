@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mood Color</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    transition: background 1.2s ease;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  
+  .container {
+    width: 100%;
+    max-width: 640px;
+  }
+  
+  h1 {
+    color: rgba(255,255,255,0.95);
+    font-size: 42px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.15);
+  }
+  
+  .subtitle {
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    font-size: 16px;
+    font-weight: 300;
+    margin-bottom: 40px;
+  }
+  
+  .input-wrap {
+    position: relative;
+    margin-bottom: 32px;
+  }
+  
+  textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 20px 24px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    color: #fff;
+    font-size: 18px;
+    font-family: inherit;
+    font-weight: 400;
+    resize: vertical;
+    outline: none;
+    transition: background 0.3s, box-shadow 0.3s;
+    line-height: 1.6;
+  }
+  
+  textarea::placeholder { color: rgba(255,255,255,0.4); }
+  textarea:focus {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+  }
+  
+  .mood-label {
+    text-align: center;
+    font-size: 20px;
+    color: rgba(255,255,255,0.85);
+    font-weight: 500;
+    margin-bottom: 24px;
+    min-height: 30px;
+    transition: opacity 0.3s;
+  }
+  
+  .palette {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  
+  .swatch {
+    aspect-ratio: 1;
+    border-radius: 16px;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+    overflow: hidden;
+  }
+  
+  .swatch:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  
+  .swatch .hex {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  
+  .swatch:hover .hex { opacity: 1; }
+  
+  .swatch.copied .hex {
+    opacity: 1;
+    background: rgba(0,0,0,0.7);
+  }
+  
+  .detail-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  
+  .detail-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  
+  .detail-chip:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+  }
+  
+  .detail-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  
+  .detail-hex {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+  }
+  
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    pointer-events: none;
+  }
+  
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  
+  .empty-state {
+    text-align: center;
+    color: rgba(255,255,255,0.35);
+    font-size: 14px;
+    padding: 40px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Mood Color</h1>
+  <p class="subtitle">Type anything. Get colors that match the vibe.</p>
+  
+  <div class="input-wrap">
+    <textarea id="input" placeholder="How are you feeling today? Type anything..." autofocus></textarea>
+  </div>
+  
+  <div class="mood-label" id="moodLabel"></div>
+  
+  <div class="palette" id="palette">
+    <div class="empty-state" style="grid-column: 1/-1;">Your palette will appear here ✨</div>
+  </div>
+  
+  <div class="detail-colors" id="details"></div>
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+const moodMap = {
+  // Positive high energy
+  happy:    { h: [45, 55],  s: [80, 95],  l: [55, 65],  label: '😊 Happy', bg: ['#f093fb', '#f5576c'] },
+  excited:  { h: [15, 35],  s: [90, 100], l: [55, 65],  label: '🎉 Excited', bg: ['#fa709a', '#fee140'] },
+  love:     { h: [340, 360],s: [80, 95],  l: [55, 70],  label: '❤️ Love', bg: ['#f093fb', '#f5576c'] },
+  joy:      { h: [40, 60],  s: [85, 100], l: [60, 70],  label: '✨ Joyful', bg: ['#ffecd2', '#fcb69f'] },
+  
+  // Positive calm
+  peaceful: { h: [160, 200],s: [40, 60],  l: [60, 75],  label: '🕊️ Peaceful', bg: ['#a1c4fd', '#c2e9fb'] },
+  calm:     { h: [180, 220],s: [30, 50],  l: [65, 80],  label: '😌 Calm', bg: ['#667eea', '#764ba2'] },
+  grateful: { h: [80, 120],s: [50, 70],  l: [55, 70],  label: '🙏 Grateful', bg: ['#89f7fe', '#66a6ff'] },
+  hopeful:  { h: [170, 195],s: [60, 80],  l: [55, 70],  label: '🌅 Hopeful', bg: ['#a8edea', '#fed6e3'] },
+  
+  // Negative
+  sad:      { h: [210, 240],s: [30, 50],  l: [30, 45],  label: '😢 Sad', bg: ['#2c3e50', '#4ca1af'] },
+  angry:    { h: [0, 15],   s: [80, 100], l: [35, 50],  label: '😡 Angry', bg: ['#cb2d3e', '#ef473a'] },
+  anxious:  { h: [270, 300],s: [40, 60],  l: [35, 50],  label: '😰 Anxious', bg: ['#4a00e0', '#8e2de2'] },
+  lonely:   { h: [220, 250],s: [20, 40],  l: [25, 40],  label: '🥀 Lonely', bg: ['#0f2027', '#2c5364'] },
+  
+  // Neutral / misc
+  chill:    { h: [250, 280],s: [40, 60],  l: [50, 65],  label: '😎 Chill', bg: ['#a18cd1', '#fbc2eb'] },
+  energetic:{ h: [20, 50],  s: [90, 100], l: [50, 60],  label: '⚡ Energetic', bg: ['#f7971e', '#ffd200'] },
+  creative: { h: [280, 320],s: [70, 90],  l: [50, 65],  label: '🎨 Creative', bg: ['#a855f7', '#ec4899'] },
+  nostalgic:{ h: [25, 45],  s: [40, 60],  l: [45, 60],  label: '📷 Nostalgic', bg: ['#dda15e', '#bc6c25'] },
+  mysterious:{ h: [260, 290],s: [50, 70],  l: [20, 35],  label: '🌙 Mysterious', bg: ['#0f0c29', '#302b63'] },
+  nature:   { h: [100, 150],s: [50, 75],  l: [40, 55],  label: '🌿 Nature', bg: ['#56ab2f', '#a8e063'] },
+  neutral:  { h: [200, 240],s: [15, 30],  l: [50, 65],  label: '🔮 Contemplative', bg: ['#667eea', '#764ba2'] }
+};
+
+const keywords = {
+  happy: ['happy','glad','great','awesome','wonderful','fantastic','amazing','good','nice','yay','haha','lol','😊','😃','😄','🙂','grinning','smile','blessed','thrilled'],
+  excited: ['excited','thrilled','pumped','hyped','stoked','cant wait','omg','!!!','🎉','🥳','🎊','woohoo','lets go','fire','lit'],
+  love: ['love','adore','heart','kiss','darling','sweetheart','❤️','💕','💗','💖','🥰','😍','crush','soulmate','romance','passion','beloved'],
+  joy: ['joy','joyful','bliss','elated','euphoria','ecstatic','overjoyed','delighted','jubilant','✨','🌟','radiant'],
+  peaceful: ['peaceful','peace','serene','tranquil','harmony','zen','🕊️','stillness','quiet','meditat'],
+  calm: ['calm','relaxed','chill','easy','mellow','soothing','gentle','soft','😌','💆','rest','unwind'],
+  grateful: ['grateful','thankful','appreciate','thanks','gratitude','🙏','bless','fortunate','lucky'],
+  hopeful: ['hopeful','hope','optimis','bright','future','believe','faith','trust','dream','wish','🌅','sunrise'],
+  sad: ['sad','unhappy','down','depressed','crying','tears','miserable','heartbreak','grief','😢','😭','💔','sorrow','hurt','pain','melanchol','gloomy','blue'],
+  angry: ['angry','mad','furious','rage','hate','pissed','annoyed','frustrated','😡','🤬','💢','ugh','terrible','awful','worst'],
+  anxious: ['anxious','anxiety','worried','nervous','stress','panic','overwhelm','fear','scared','😰','😱','terrified','dread','uneasy'],
+  lonely: ['lonely','alone','isolated','missing','miss you','nobody','empty','🥀','abandoned','forgotten','invisible'],
+  chill: ['chill','vibes','vibe','cool','whatever','laid back','easy going','😎','🤙','lounge','coast'],
+  energetic: ['energetic','energy','hyper','active','alive','power','strong','⚡','💪','workout','run','fast','go'],
+  creative: ['creative','art','design','build','create','imagine','invent','paint','draw','🎨','🎭','music','write','craft','inspiration'],
+  nostalgic: ['nostalgic','nostalgia','remember','memory','memories','old times','back then','📷','throwback','vintage','retro','childhood','miss the'],
+  mysterious: ['mysterious','mystery','dark','shadow','night','secret','hidden','🌙','enigma','unknown','whisper','fog','noir'],
+  nature: ['nature','forest','ocean','mountain','tree','flower','garden','🌿','🌊','🌸','🌻','earth','wildlife','outdoors','hiking','river','sky','rain','sun']
+};
+
+const emojiMoods = {
+  '😊': 'happy', '😃': 'happy', '😄': 'happy', '🙂': 'happy', '😁': 'happy',
+  '🎉': 'excited', '🥳': 'excited', '🎊': 'excited', '🔥': 'excited',
+  '❤️': 'love', '💕': 'love', '💗': 'love', '💖': 'love', '🥰': 'love', '😍': 'love', '💘': 'love',
+  '✨': 'joy', '🌟': 'joy', '💫': 'joy',
+  '🕊️': 'peaceful', '☮️': 'peaceful',
+  '😌': 'calm', '💆': 'calm', '🧘': 'calm',
+  '🙏': 'grateful',
+  '🌅': 'hopeful', '🌈': 'hopeful',
+  '😢': 'sad', '😭': 'sad', '💔': 'sad', '😞': 'sad', '😔': 'sad',
+  '😡': 'angry', '🤬': 'angry', '💢': 'angry', '😤': 'angry',
+  '😰': 'anxious', '😱': 'anxious', '😨': 'anxious',
+  '🥀': 'lonely',
+  '😎': 'chill', '🤙': 'chill',
+  '⚡': 'energetic', '💪': 'energetic',
+  '🎨': 'creative', '🎭': 'creative', '🎵': 'creative',
+  '📷': 'nostalgic',
+  '🌙': 'mysterious', '🔮': 'mysterious',
+  '🌿': 'nature', '🌊': 'nature', '🌸': 'nature', '🌻': 'nature', '🌲': 'nature'
+};
+
+function analyzeMood(text) {
+  if (!text.trim()) return null;
+  const lower = text.toLowerCase();
+  const scores = {};
+
+  // Emoji detection
+  for (const [emoji, mood] of Object.entries(emojiMoods)) {
+    if (text.includes(emoji)) {
+      scores[mood] = (scores[mood] || 0) + 3;
+    }
+  }
+
+  // Keyword matching
+  for (const [mood, words] of Object.entries(keywords)) {
+    for (const w of words) {
+      if (lower.includes(w)) {
+        scores[mood] = (scores[mood] || 0) + 1;
+      }
+    }
+  }
+
+  // Punctuation energy
+  const excl = (text.match(/!/g) || []).length;
+  if (excl >= 3) scores.excited = (scores.excited || 0) + 2;
+  
+  const quest = (text.match(/\?/g) || []).length;
+  if (quest >= 2) scores.anxious = (scores.anxious || 0) + 1;
+
+  // All caps = intense
+  const capsWords = (text.match(/[A-Z]{3,}/g) || []).length;
+  if (capsWords >= 2) {
+    scores.angry = (scores.angry || 0) + 1;
+    scores.excited = (scores.excited || 0) + 1;
+  }
+
+  if (Object.keys(scores).length === 0) return moodMap.neutral;
+
+  // Top mood
+  const sorted = Object.entries(scores).sort((a,b) => b[1] - a[1]);
+  const primary = sorted[0][0];
+  return moodMap[primary] || moodMap.neutral;
+}
+
+function rand(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function hslToHex(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  let r, g, b;
+  if (s === 0) { r = g = b = l; } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return '#' + [r,g,b].map(x => Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
+
+function generatePalette(mood) {
+  const colors = [];
+  const hRange = mood.h[1] - mood.h[0];
+  
+  for (let i = 0; i < 5; i++) {
+    const h = mood.h[0] + (hRange * i / 4) + rand(-10, 10);
+    const s = rand(mood.s[0], mood.s[1]);
+    const l = rand(mood.l[0], mood.l[1]);
+    colors.push({
+      h: ((h % 360) + 360) % 360,
+      s: Math.min(100, Math.max(0, s)),
+      l: Math.min(100, Math.max(0, l)),
+    });
+  }
+  
+  return colors.map(c => ({
+    hsl: c,
+    hex: hslToHex(c.h, c.s, c.l)
+  }));
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1500);
+}
+
+function copyHex(hex) {
+  navigator.clipboard.writeText(hex).then(() => showToast(`Copied ${hex}`));
+}
+
+let debounce;
+const input = document.getElementById('input');
+const paletteEl = document.getElementById('palette');
+const detailsEl = document.getElementById('details');
+const moodLabel = document.getElementById('moodLabel');
+
+input.addEventListener('input', () => {
+  clearTimeout(debounce);
+  debounce = setTimeout(update, 300);
+});
+
+function update() {
+  const text = input.value;
+  const mood = analyzeMood(text);
+  
+  if (!mood) {
+    paletteEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1">Your palette will appear here ✨</div>';
+    detailsEl.innerHTML = '';
+    moodLabel.textContent = '';
+    document.body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    return;
+  }
+  
+  moodLabel.textContent = mood.label;
+  
+  // Update background
+  if (mood.bg) {
+    document.body.style.background = `linear-gradient(135deg, ${mood.bg[0]} 0%, ${mood.bg[1]} 100%)`;
+  }
+  
+  const colors = generatePalette(mood);
+  
+  paletteEl.innerHTML = colors.map((c, i) => `
+    <div class="swatch" style="background:${c.hex}; animation: fadeIn 0.3s ${i*0.08}s both;" onclick="copyHex('${c.hex}')">
+      <div class="hex">${c.hex}</div>
+    </div>
+  `).join('');
+  
+  detailsEl.innerHTML = colors.map(c => `
+    <div class="detail-chip" onclick="copyHex('${c.hex}')">
+      <div class="detail-dot" style="background:${c.hex}"></div>
+      <span class="detail-hex">${c.hex}</span>
+    </div>
+  `).join('');
+}
+
+// Initial animation
+const style = document.createElement('style');
+style.textContent = `@keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
